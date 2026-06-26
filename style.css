@@ -1,0 +1,144 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1b1d22; color: #e7e9ee; }
+#app { display: flex; height: 100vh; }
+
+#panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: #20232a;
+  border-right: 1px solid #2e323b;
+  padding: 16px;
+  overflow-y: auto;
+}
+.panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+#panel h1 { font-size: 18px; margin: 0; }
+#helpBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #383d48;
+  color: #e7e9ee;
+  border: none;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+}
+#helpBtn:hover { background: #4a5060; }
+#panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #9aa3b2; margin: 0 0 8px; }
+#panel section { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #2e323b; }
+#panel label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #c4c9d4; margin-bottom: 8px; }
+#panel input, #panel select {
+  background: #15171c;
+  border: 1px solid #383d48;
+  color: #e7e9ee;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+#panel input[type="color"] { padding: 2px; height: 32px; }
+#panel label.checkbox-row { flex-direction: row; align-items: center; gap: 6px; }
+#panel label.checkbox-row input[type="checkbox"] { width: auto; flex: none; }
+#panel button {
+  background: #3a6ff0;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+#panel button:hover { background: #2f5cd0; }
+#clearBtn, #deleteBtn { background: #c0392b; }
+#clearBtn:hover, #deleteBtn:hover { background: #a5311f; }
+.hidden { display: none !important; }
+.hint { font-size: 11px; color: #8b93a3; line-height: 1.4; }
+.status { font-size: 12px; color: #7fd97f; min-height: 16px; }
+
+#viewport { flex: 1; position: relative; }
+#viewport canvas { display: block; }
+
+/* ---------- Tabs ---------- */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+#panel .tab-btn {
+  background: #15171c;
+  color: #9aa3b2;
+  border: 1px solid #383d48;
+  border-radius: 4px;
+  padding: 6px 9px;
+  font-size: 11px;
+  cursor: pointer;
+  margin: 0;
+}
+#panel .tab-btn:hover { background: #15171c; color: #e7e9ee; border-color: #4a5060; }
+#panel .tab-btn.active { background: #3a6ff0; color: white; border-color: #3a6ff0; }
+.tab-panel { margin-bottom: 4px; }
+
+/* ---------- Help modal ---------- */
+#helpModal { position: fixed; inset: 0; z-index: 100; }
+#helpModalBackdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); }
+#helpModalContent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(640px, 90vw);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #20232a;
+  border: 1px solid #383d48;
+  border-radius: 8px;
+  padding: 24px 28px;
+}
+#helpModalContent h2 { margin-top: 0; font-size: 20px; }
+#helpModalContent h3 { font-size: 14px; color: #9aa3b2; text-transform: uppercase; letter-spacing: 0.05em; margin: 20px 0 8px; }
+#helpModalContent p, #helpModalContent li { font-size: 13px; line-height: 1.6; color: #c4c9d4; }
+#helpModalContent ul { padding-left: 20px; }
+#helpCloseBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: #9aa3b2;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+#helpCloseBtn:hover { color: #e7e9ee; }
+
+.help-tabs-wrap { display: flex; gap: 16px; margin-top: 8px; }
+.help-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 130px;
+  flex-shrink: 0;
+}
+.help-tab-btn {
+  background: #15171c;
+  color: #9aa3b2;
+  border: 1px solid #383d48;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.help-tab-btn:hover { color: #e7e9ee; border-color: #4a5060; }
+.help-tab-btn.active { background: #3a6ff0; color: white; border-color: #3a6ff0; }
+.help-tab-content { flex: 1; min-width: 0; }
+.help-panel code {
+  background: #15171c;
+  border: 1px solid #383d48;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 12px;
+}

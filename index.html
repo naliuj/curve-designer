@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>3D Curve Designer</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <div class="panel-header">
+        <h1>Curve Designer</h1>
+        <button id="helpBtn" title="Open documentation" aria-label="Help">?</button>
+      </div>
+
+      <section>
+        <h2>Generate Curve</h2>
+
+        <label title="Choose the shape of curve to voxelize.">Type
+          <select id="curveType">
+            <option value="helix">Helix</option>
+            <option value="helix-horizontal">Helix (Horizontal)</option>
+            <option value="sine">Sine Wave</option>
+            <option value="line">Line</option>
+            <option value="custom">Custom Parametric</option>
+            <option value="corner-edge">Rounded Edge (Quarter Arc)</option>
+            <option value="corner-round">Rounded Corner (Octant)</option>
+            <!-- "fading-corner" hidden for now: needs more design work. Backend
+                 logic (generateFadingCorner in app.js) and its HTML panel below
+                 are kept intact for revisiting later. -->
+          </select>
+        </label>
+
+        <div class="tab-panel" data-panel="helix">
+          <label title="Distance from the Y axis that the spiral circles around.">radius <input id="pRadius" type="number" value="5" step="0.5" /></label>
+          <label title="How much the spiral rises in Y for each unit increase in t.">height scale <input id="pHeight" type="number" value="0.5" step="0.1" /></label>
+          <label title="Solid radius of the spiral tube around its centerline. 0 makes a 1-voxel-thin curve.">thickness <input id="helixThickness" type="number" value="0" min="0" step="0.5" /></label>
+        </div>
+
+        <div class="tab-panel hidden" data-panel="helix-horizontal">
+          <label title="Distance from the X axis that the spiral circles around.">radius <input id="hRadius" type="number" value="5" step="0.5" /></label>
+          <label title="How much the spiral advances along X for each unit increase in t.">length scale <input id="hLength" type="number" value="0.5" step="0.1" /></label>
+          <label title="Solid radius of the spiral tube around its centerline. 0 makes a 1-voxel-thin curve.">thickness <input id="hThickness" type="number" value="0" min="0" step="0.5" /></label>
+        </div>
+
+        <div class="tab-panel hidden" data-panel="sine">
+          <label title="The peak height of the wave above and below zero.">amplitude <input id="pAmp" type="number" value="5" step="0.5" /></label>
+          <label title="How rapidly the wave oscillates as t increases. Higher = more wiggles.">frequency <input id="pFreq" type="number" value="0.5" step="0.1" /></label>
+          <label title="Solid radius of the wave's tube around its centerline. 0 makes a 1-voxel-thin curve.">thickness <input id="sineThickness" type="number" value="0" min="0" step="0.5" /></label>
+        </div>
+
+        <div class="tab-panel hidden" data-panel="line">
+          <p class="hint">Generates a straight line along the X axis. Use t start/end below to set its length.</p>
+          <label title="Solid radius of the line. 0 makes a 1-voxel-thin line.">radius <input id="lineRadius" type="number" value="0" min="0" step="0.5" /></label>
+        </div>
+
+        <div class="tab-panel hidden" data-panel="custom">
+          <label title="Formula for the X coordinate as a function of t. You can use sin, cos, tan, sqrt, abs, pow, PI, floor, ceil, min, max, exp, log, random.">x(t) <input id="fx" type="text" value="t" /></label>
+          <label title="Formula for the Y coordinate as a function of t.">y(t) <input id="fy" type="text" value="sin(t)*5" /></label>
+          <label title="Formula for the Z coordinate as a function of t.">z(t) <input id="fz" type="text" value="cos(t)*5" /></label>
+        </div>
+
+        <div class="tab-panel hidden" data-panel="corner-edge">
+          <label title="Distance of the arc from the corner point — how rounded the edge is.">radius <input id="edgeRadius" type="number" value="3" step="0.5" /></label>
+          <label title="Which two axes the quarter-circle arc is swept across.">plane
+            <select id="edgePlane">
+              <option value="xz">XZ (horizontal)</option>
+              <option value="xy">XY</option>
+              <option value="yz">YZ</option>
+            </select>
+          </label>
+          <label title="X coordinate of the sharp corner point being rounded.">center x <input id="edgeCenterX" type="number" value="0" step="1" /></label>
+          <label title="Y coordinate of the sharp corner point being rounded.">center y <input id="edgeCenterY" type="number" value="0" step="1" /></label>
+          <label title="Z coordinate of the sharp corner point being rounded.">center z <input id="edgeCenterZ" type="number" value="0" step="1" /></label>
+          <p class="hint">Uses t start/end below as the sweep angle in radians (0 to 1.5708 = quarter turn).</p>
+        </div>
+
+        <div class="tab-panel hidden" data-panel="corner-round">
+          <label title="Distance of the curved surface from the corner point — how rounded the corner is.">radius <input id="cornerRadius" type="number" value="3" step="0.5" /></label>
+          <label title="X coordinate of the sharp corner point being rounded.">center x <input id="cornerCenterX" type="number" value="0" step="1" /></label>
+          <label title="Y coordinate of the sharp corner point being rounded.">center y <input id="cornerCenterY" type="number" value="0" step="1" /></label>
+          <label title="Z coordinate of the sharp corner point being rounded.">center z <input id="cornerCenterZ" type="number" value="0" step="1" /></label>
+          <label title="Which side of the corner along X the rounded patch bulges toward.">octant x sign
+            <select id="cornerSignX"><option value="1">+X</option><option value="-1">-X</option></select>
+          </label>
+          <label title="Which side of the corner along Y the rounded patch bulges toward.">octant y sign
+            <select id="cornerSignY"><option value="1">+Y</option><option value="-1">-Y</option></select>
+          </label>
+          <label title="Which side of the corner along Z the rounded patch bulges toward.">octant z sign
+            <select id="cornerSignZ"><option value="1">+Z</option><option value="-1">-Z</option></select>
+          </label>
+          <p class="hint">Uses the steps field below for surface resolution.</p>
+        </div>
+
+        <div class="tab-panel hidden" data-panel="fading-corner">
+          <label title="Length of each of the 3 straight rods extending from the corner point.">edge length <input id="fcLength" type="number" value="10" min="0" step="0.5" /></label>
+          <label title="Solid radius of each rod once it's past the fade distance — the straight, unrounded part.">rod thickness <input id="fcThickness" type="number" value="1" min="0" step="0.5" /></label>
+          <label title="Extra radius added on top of rod thickness right at the corner tip, fading to 0 over the fade distance.">tip bulge <input id="fcBulge" type="number" value="2" min="0" step="0.5" /></label>
+          <label title="Distance from the corner point over which the tip bulge fades away to a plain straight rod.">fade distance <input id="fcFade" type="number" value="5" min="0.1" step="0.5" /></label>
+          <label title="Shape of the fade transition from rounded tip to straight rod.">easing
+            <select id="fcEasing">
+              <option value="linear">Linear</option>
+              <option value="ease-in">Ease In</option>
+              <option value="ease-out">Ease Out</option>
+            </select>
+          </label>
+          <label title="X coordinate of the corner point the 3 rods extend from.">center x <input id="fcCenterX" type="number" value="0" step="1" /></label>
+          <label title="Y coordinate of the corner point the 3 rods extend from.">center y <input id="fcCenterY" type="number" value="0" step="1" /></label>
+          <label title="Z coordinate of the corner point the 3 rods extend from.">center z <input id="fcCenterZ" type="number" value="0" step="1" /></label>
+          <label title="Which direction along X the rod extends.">rod x sign
+            <select id="fcSignX"><option value="1">+X</option><option value="-1">-X</option></select>
+          </label>
+          <label title="Which direction along Y the rod extends.">rod y sign
+            <select id="fcSignY"><option value="1">+Y</option><option value="-1">-Y</option></select>
+          </label>
+          <label title="Which direction along Z the rod extends.">rod z sign
+            <select id="fcSignZ"><option value="1">+Z</option><option value="-1">-Z</option></select>
+          </label>
+          <p class="hint">Uses the steps field below for resolution along each rod.</p>
+        </div>
+
+        <div id="tRangeRow">
+          <label title="The value of t (or sweep angle, for Rounded Edge) at the start of the curve.">t start <input id="tStart" type="number" value="0" step="0.1" /></label>
+          <label title="The value of t (or sweep angle, for Rounded Edge) at the end of the curve.">t end <input id="tEnd" type="number" value="20" step="0.1" /></label>
+          <label title="How many sample points to generate between t start and t end. More steps = smoother curve.">steps <input id="steps" type="number" value="80" min="2" /></label>
+        </div>
+
+        <button id="generateBtn" title="Voxelize the current curve settings into blocks.">Generate</button>
+        <button id="clearBtn" title="Remove every block from the scene.">Clear All</button>
+      </section>
+
+      <section>
+        <h2>Manual Edit</h2>
+        <p class="hint">Left-click a grid cell or existing block to add a block.<br/>Right-click a block to remove it.<br/>Drag with either button to orbit the camera.</p>
+        <label title="The color used for new blocks, whether generated or manually placed.">Block color <input id="blockColor" type="color" value="#4fa8ff" /></label>
+        <label class="checkbox-row" title="Show or hide the ground grid lines. Clicking to place blocks still works while hidden.">
+          <input id="gridToggle" type="checkbox" checked /> Show grid
+        </label>
+      </section>
+
+      <section>
+        <h2>Layer Preview</h2>
+        <label title="The Y layer to preview.">Layer Y
+          <input id="layerY" type="number" value="0" step="1" />
+        </label>
+        <label title="Choose which blocks remain visible relative to the layer Y value.">Mode
+          <select id="layerMode">
+            <option value="full">Full Preview</option>
+            <option value="above">All Above</option>
+            <option value="below">All Below</option>
+          </select>
+        </label>
+      </section>
+
+      <section>
+        <h2>Save / Load</h2>
+        <label title="A name to save the current set of blocks under.">Design name <input id="designName" type="text" placeholder="my-curve" /></label>
+        <button id="saveBtn" title="Save all current blocks under the design name above.">Save</button>
+        <select id="loadSelect" title="Pick a previously saved design."><option value="">-- saved designs --</option></select>
+        <button id="loadBtn" title="Replace the current scene with the selected saved design.">Load</button>
+        <button id="deleteBtn" title="Permanently delete the selected saved design.">Delete</button>
+        <button id="exportNbtBtn" title="Download the current blocks as a Minecraft structure (.nbt) file. Each block color is mapped to the nearest wool color.">Export as Minecraft NBT</button>
+      </section>
+
+      <p id="status" class="status"></p>
+    </aside>
+    <div id="viewport"></div>
+  </div>
+
+  <div id="helpModal" class="hidden">
+    <div id="helpModalBackdrop"></div>
+    <div id="helpModalContent">
+      <button id="helpCloseBtn" aria-label="Close">&times;</button>
+      <h2>How to use Curve Designer</h2>
+
+      <h3>The grid</h3>
+      <p>The dark plane is a 100&times;100 unit grid. Each cell is one 1&times;1&times;1 block. Drag with either mouse button to orbit the camera around the scene; scroll to zoom.</p>
+
+      <h3>Manual Edit</h3>
+      <p>Left-click an empty grid cell, or the face of an existing block, to add a new block there. Right-click an existing block to remove it. A translucent preview block shows where the next left-click would place a block. Dragging (moving the mouse more than a few pixels between press and release) orbits the camera instead of placing or removing a block, so accidental placement while rotating the view is avoided.</p>
+
+      <h3>Block color</h3>
+      <p>The color swatch under Manual Edit sets the color used for the <em>next</em> block placed, whether by Generate or by clicking directly &mdash; change it before generating or clicking to use a different color.</p>
+
+      <h3>Layer Preview</h3>
+      <p>Use this to inspect your design one slice at a time without deleting anything. Set <em>Layer Y</em> and choose a mode: <strong>Full Preview</strong> shows every block as normal; <strong>All Above</strong> hides any block with a Y coordinate below the layer value; <strong>All Below</strong> hides any block with a Y coordinate above it. This only changes what is visible &mdash; hidden blocks are still part of the design and reappear when you switch back to Full Preview.</p>
+
+      <h3>Save / Load</h3>
+      <p>Saved designs are stored in your browser's local storage (not on a server, and not shared between browsers/devices). Type a name and click Save to store the current blocks; pick a name from the dropdown and click Load to restore it, or Delete to remove it permanently.</p>
+      <p><strong>Export as Minecraft NBT</strong> downloads the current blocks as a vanilla structure-block (.nbt) file you can load in Minecraft Java Edition with a structure block. Each block's color is matched to the closest of the 16 wool colors, since Minecraft blocks don't support arbitrary RGB colors. Coordinates are shifted so the lowest corner of your design sits at the structure's origin. This requires a browser with gzip compression support (Chrome, Edge, Firefox, and Safari all qualify).</p>
+
+      <h3>Curve Parameters</h3>
+      <p>Pick a curve type below for a full explanation of its parameters. Generated blocks are added to whatever is already in the scene &mdash; they are not cleared automatically. Click <strong>Clear All</strong> to start over.</p>
+
+      <div class="help-tabs-wrap">
+        <div class="help-tabs" id="helpCurveTabs">
+          <button class="help-tab-btn active" data-help="helix">Helix</button>
+          <button class="help-tab-btn" data-help="helix-horizontal">Helix (Horizontal)</button>
+          <button class="help-tab-btn" data-help="sine">Sine</button>
+          <button class="help-tab-btn" data-help="line">Line</button>
+          <button class="help-tab-btn" data-help="custom">Custom</button>
+          <button class="help-tab-btn" data-help="corner-edge">Rounded Edge</button>
+          <button class="help-tab-btn" data-help="corner-round">Rounded Corner</button>
+        </div>
+        <div class="help-tab-content">
+          <div class="help-panel" data-help-panel="helix">
+            <p>A spiral that circles the Y axis at a fixed radius while climbing steadily, like a spring or a spiral staircase.</p>
+            <ul>
+              <li><strong>radius</strong> &mdash; distance from the Y axis to the spiral.</li>
+              <li><strong>height scale</strong> &mdash; how far the spiral rises in Y for each unit increase of t. Larger values produce a steeper, more stretched-out spiral.</li>
+              <li><strong>thickness</strong> &mdash; solid radius of the tube around the spiral's centerline. 0 (default) gives a 1-voxel-thin curve; higher values make a thicker solid spring.</li>
+              <li><strong>t start / t end</strong> &mdash; the range of the sweep parameter t, in radians. Each 2&pi; (&asymp;6.283) of range is one full turn around the axis.</li>
+              <li><strong>steps</strong> &mdash; how many sample points are taken across the t range. More steps give a smoother spiral; too few will look blocky or skip turns.</li>
+            </ul>
+          </div>
+          <div class="help-panel hidden" data-help-panel="helix-horizontal">
+            <p>A spiral that circles the X axis at a fixed radius while advancing steadily along X, like a horizontal corkscrew lying on its side.</p>
+            <ul>
+              <li><strong>radius</strong> &mdash; distance from the X axis to the spiral.</li>
+              <li><strong>length scale</strong> &mdash; how far the spiral advances along X for each unit increase of t. Larger values produce a steeper, more stretched-out spiral.</li>
+              <li><strong>thickness</strong> &mdash; solid radius of the tube around the spiral's centerline. 0 (default) gives a 1-voxel-thin curve; higher values make a thicker solid spring.</li>
+              <li><strong>t start / t end</strong> &mdash; the range of the sweep parameter t, in radians. Each 2&pi; (&asymp;6.283) of range is one full turn around the axis.</li>
+              <li><strong>steps</strong> &mdash; how many sample points are taken across the t range. More steps give a smoother spiral; too few will look blocky or skip turns.</li>
+            </ul>
+          </div>
+          <div class="help-panel hidden" data-help-panel="sine">
+            <p>A wave that travels along the X axis while oscillating up and down in Y.</p>
+            <ul>
+              <li><strong>amplitude</strong> &mdash; the peak height of the wave above and below zero.</li>
+              <li><strong>frequency</strong> &mdash; how rapidly the wave oscillates as t increases. Higher values pack in more wiggles over the same t range.</li>
+              <li><strong>thickness</strong> &mdash; solid radius of the tube around the wave's centerline. 0 (default) gives a 1-voxel-thin curve; higher values make a thicker solid wave.</li>
+              <li><strong>t start / t end</strong> &mdash; the range of X values the wave is drawn across.</li>
+              <li><strong>steps</strong> &mdash; how many sample points are taken across the t range. More steps give a smoother wave.</li>
+            </ul>
+          </div>
+          <div class="help-panel hidden" data-help-panel="line">
+            <p>A straight segment along the X axis.</p>
+            <ul>
+              <li><strong>radius</strong> &mdash; solid radius of the line. 0 (default) gives a 1-voxel-thin line; higher values make a thicker solid rod.</li>
+              <li><strong>t start / t end</strong> &mdash; the X coordinates the line starts and ends at.</li>
+              <li><strong>steps</strong> &mdash; how many sample points are placed along the line. Since a straight line never skips an integer X value, a low step count is usually fine.</li>
+            </ul>
+          </div>
+          <div class="help-panel hidden" data-help-panel="custom">
+            <p>Write your own parametric formulas for x, y, and z as functions of t. Useful for shapes the built-in presets don't cover.</p>
+            <ul>
+              <li><strong>x(t), y(t), z(t)</strong> &mdash; JavaScript-like expressions evaluated for each sample of t. Available without a prefix: sin, cos, tan, sqrt, abs, pow, PI, floor, ceil, min, max, exp, log, random. Example: <code>sin(t)*5</code>.</li>
+              <li><strong>t start / t end</strong> &mdash; the range of t passed into your formulas.</li>
+              <li><strong>steps</strong> &mdash; how many sample points are taken across the t range. More steps give a smoother result, especially for fast-changing formulas.</li>
+            </ul>
+          </div>
+          <div class="help-panel hidden" data-help-panel="corner-edge">
+            <p>A quarter-circle arc that rounds a single straight edge of a box, in one plane.</p>
+            <ul>
+              <li><strong>radius</strong> &mdash; how far the arc sits from the sharp corner point &mdash; controls how rounded the edge looks.</li>
+              <li><strong>plane</strong> &mdash; which two axes the arc is swept across (XZ is horizontal, XY and YZ are vertical).</li>
+              <li><strong>center x / y / z</strong> &mdash; the coordinates of the sharp corner point being rounded. The arc is offset from this point by the radius along the plane's two axes.</li>
+              <li><strong>t start / t end</strong> &mdash; the sweep angle in radians. A full quarter turn is 0 to 1.5708 (&pi;/2); this is filled in automatically when you select this tab.</li>
+              <li><strong>steps</strong> &mdash; how many sample points are taken across the sweep. More steps give a smoother arc.</li>
+            </ul>
+            <p>Generate one arc per edge of your box, positioning each with center x/y/z, then connect them with straight Lines or manual blocks to build a fully rounded box.</p>
+          </div>
+          <div class="help-panel hidden" data-help-panel="corner-round">
+            <p>A curved spherical-octant patch that rounds one corner point of a box in all three dimensions at once, like rounding the corner of a cube into a ball-shaped notch.</p>
+            <ul>
+              <li><strong>radius</strong> &mdash; how far the curved surface sits from the sharp corner point &mdash; controls how rounded the corner looks.</li>
+              <li><strong>center x / y / z</strong> &mdash; the coordinates of the sharp corner point being rounded.</li>
+              <li><strong>octant x / y / z sign</strong> &mdash; which side of the corner, along each axis, the curve bulges toward. Together the three signs pick one of the 8 octants around the corner point.</li>
+              <li><strong>steps</strong> &mdash; surface resolution. The patch is generated as a steps&times;steps grid of points; higher values give a smoother, more solid-looking surface but generate more blocks.</li>
+            </ul>
+            <p>This curve type does not use t start/end &mdash; the sweep always covers a full quarter turn in both directions to produce one octant.</p>
+          </div>
+          <div class="help-panel hidden" data-help-panel="fading-corner">
+            <p>A 3D corner bracket: three straight rods extending from one corner point along X, Y, and Z. Right at the corner the rods are fattened into a smooth rounded joint; moving away from the corner, that extra rounding fades out until each rod is a plain straight thickness. Use this to build rounded picture-frame-style corners instead of a solid filled corner.</p>
+            <ul>
+              <li><strong>edge length</strong> &mdash; how long each of the 3 rods extends from the corner point.</li>
+              <li><strong>rod thickness</strong> &mdash; the solid radius of each rod once you're past the fade distance &mdash; the plain straight part. 0 gives a 1-voxel-thin rod.</li>
+              <li><strong>tip bulge</strong> &mdash; extra radius added on top of rod thickness right at the corner (distance 0), making the joint where all 3 rods meet look smoothly rounded instead of sharp.</li>
+              <li><strong>fade distance</strong> &mdash; how far from the corner point the tip bulge fades away to nothing, blending into the plain rod thickness.</li>
+              <li><strong>easing</strong> &mdash; the shape of that fade. <em>Linear</em> fades evenly; <em>Ease In</em> keeps the bulge close to full size longer before dropping off near the fade distance; <em>Ease Out</em> drops the bulge quickly near the corner then tapers gently the rest of the way.</li>
+              <li><strong>center x / y / z</strong> &mdash; the coordinates of the shared corner point the 3 rods extend from.</li>
+              <li><strong>rod x / y / z sign</strong> &mdash; which direction (+ or &minus;) each rod extends along its axis.</li>
+              <li><strong>steps</strong> &mdash; how many sample points are taken along each rod's length. More steps give a smoother taper.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
