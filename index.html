@@ -125,6 +125,10 @@
           <label title="How many sample points to generate between t start and t end. More steps = smoother curve.">steps <input id="steps" type="number" value="80" min="2" /></label>
         </div>
 
+        <label class="checkbox-row" title="Solid keeps every generated block. Hollow strips out any block whose 6 neighbors are all also blocks, leaving only the outer shell.">
+          <input id="hollowToggle" type="checkbox" /> Hollow (shell only)
+        </label>
+
         <button id="generateBtn" title="Voxelize the current curve settings into blocks.">Generate</button>
         <button id="clearBtn" title="Remove every block from the scene.">Clear All</button>
       </section>
@@ -191,6 +195,7 @@
 
       <h3>Curve Parameters</h3>
       <p>Pick a curve type below for a full explanation of its parameters. Generated blocks are added to whatever is already in the scene &mdash; they are not cleared automatically. Click <strong>Clear All</strong> to start over.</p>
+      <p>The <strong>Hollow (shell only)</strong> checkbox affects every Generate click: when checked, after generating it removes any block whose all 6 neighbors (up/down/north/south/east/west) are also occupied blocks, leaving only the outer shell. This applies to the whole scene at generate time, not just newly added blocks, so it can also hollow out previously placed or generated blocks on the next Generate. Useful for shapes built with thickness, like solid rounded corners or thick tubes, to save blocks and material.</p>
 
       <div class="help-tabs-wrap">
         <div class="help-tabs" id="helpCurveTabs">

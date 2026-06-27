@@ -30,10 +30,11 @@ scene.add(dirLight);
 // direction a block is approaching, instead of expanding uniformly.
 const GRID_EDGE_MARGIN = 5;
 const GRID_GROW_STEP = 5;
-let gridMinX = -50;
-let gridMaxX = 50;
-let gridMinZ = -50;
-let gridMaxZ = 50;
+const GRID_DEFAULT_HALF = 50;
+let gridMinX = -GRID_DEFAULT_HALF;
+let gridMaxX = GRID_DEFAULT_HALF;
+let gridMinZ = -GRID_DEFAULT_HALF;
+let gridMaxZ = GRID_DEFAULT_HALF;
 
 const gridLineMaterial = new THREE.LineBasicMaterial({ color: 0x3a3f4a });
 
@@ -118,6 +119,7 @@ function removeBlock(x, y, z) {
   scene.remove(mesh);
   mesh.material.dispose();
   blocks.delete(k);
+  shrinkGridIfPossible();
 }
 
 function clearAllBlocks() {
@@ -126,6 +128,42 @@ function clearAllBlocks() {
     mesh.material.dispose();
   }
   blocks.clear();
+  shrinkGridIfPossible();
+}
+
+const NEIGHBOR_OFFSETS = [
+  [1, 0, 0],
+  [-1, 0, 0],
+  [0, 1, 0],
+  [0, -1, 0],
+  [0, 0, 1],
+  [0, 0, -1],
+];
+
+// Removes any block whose all 6 neighbors are also occupied blocks, leaving
+// only the blocks with at least one face exposed to empty space.
+function hollowOut() {
+  const toRemove = [];
+  for (const [k, mesh] of blocks) {
+    const [x, y, z] = mesh.userData.gridPos;
+    const exposed = NEIGHBOR_OFFSETS.some(
+      ([dx, dy, dz]) => !blocks.has(key(x + dx, y + dy, z + dz))
+    );
+    if (!exposed) toRemove.push(k);
+  }
+  for (const k of toRemove) {
+    const mesh = blocks.get(k);
+    scene.remove(mesh);
+    mesh.material.dispose();
+    blocks.delete(k);
+  }
+  if (toRemove.length > 0) shrinkGridIfPossible();
+  return toRemove.length;
+}
+
+function applyHollowIfEnabled() {
+  if (!document.getElementById("hollowToggle").checked) return 0;
+  return hollowOut();
 }
 
 // ---------- Raycasting for manual edit ----------
@@ -177,6 +215,57 @@ function ensureGridCovers(x, z) {
     grew = true;
   }
   if (grew) {
+    rebuildGridLines();
+    rebuildGroundPlaneMesh();
+  }
+}
+
+// Shrinks each side of the grid back down by GRID_GROW_STEP whenever no
+// remaining block needs that much room, but never below the default extent.
+function shrinkGridIfPossible() {
+  let maxXNeeded = -Infinity;
+  let minXNeeded = Infinity;
+  let maxZNeeded = -Infinity;
+  let minZNeeded = Infinity;
+  for (const mesh of blocks.values()) {
+    const [x, , z] = mesh.userData.gridPos;
+    if (x > maxXNeeded) maxXNeeded = x;
+    if (x < minXNeeded) minXNeeded = x;
+    if (z > maxZNeeded) maxZNeeded = z;
+    if (z < minZNeeded) minZNeeded = z;
+  }
+
+  let shrank = false;
+  while (
+    gridMaxX - GRID_GROW_STEP >= GRID_DEFAULT_HALF &&
+    gridMaxX - GRID_GROW_STEP - GRID_EDGE_MARGIN > maxXNeeded
+  ) {
+    gridMaxX -= GRID_GROW_STEP;
+    shrank = true;
+  }
+  while (
+    gridMinX + GRID_GROW_STEP <= -GRID_DEFAULT_HALF &&
+    gridMinX + GRID_GROW_STEP + GRID_EDGE_MARGIN < minXNeeded
+  ) {
+    gridMinX += GRID_GROW_STEP;
+    shrank = true;
+  }
+  while (
+    gridMaxZ - GRID_GROW_STEP >= GRID_DEFAULT_HALF &&
+    gridMaxZ - GRID_GROW_STEP - GRID_EDGE_MARGIN > maxZNeeded
+  ) {
+    gridMaxZ -= GRID_GROW_STEP;
+    shrank = true;
+  }
+  while (
+    gridMinZ + GRID_GROW_STEP <= -GRID_DEFAULT_HALF &&
+    gridMinZ + GRID_GROW_STEP + GRID_EDGE_MARGIN < minZNeeded
+  ) {
+    gridMinZ += GRID_GROW_STEP;
+    shrank = true;
+  }
+
+  if (shrank) {
     rebuildGridLines();
     rebuildGroundPlaneMesh();
   }
@@ -461,7 +550,12 @@ function generateCornerRound() {
     }
   }
 
-  setStatus(`Generated ${placed} blocks.`);
+  const removed = applyHollowIfEnabled();
+  setStatus(
+    removed > 0
+      ? `Generated ${placed} blocks (hollowed: removed ${removed} interior).`
+      : `Generated ${placed} blocks.`
+  );
 }
 
 // Stamps a solid sphere of the given radius around (cx,cy,cz). Radius 0 just
@@ -544,7 +638,13 @@ function generateFadingCorner() {
     }
   }
 
-  setStatus(`Generated ${blocks.size - sizeBefore} blocks.`);
+  const placedNet = blocks.size - sizeBefore;
+  const removed = applyHollowIfEnabled();
+  setStatus(
+    removed > 0
+      ? `Generated ${placedNet} blocks (hollowed: removed ${removed} interior).`
+      : `Generated ${placedNet} blocks.`
+  );
 }
 
 function generateCurve() {
@@ -594,7 +694,13 @@ function generateCurve() {
     setStatus(`Error evaluating curve: ${err.message}`, true);
     return;
   }
-  setStatus(`Generated ${blocks.size - sizeBefore} blocks.`);
+  const placedNet = blocks.size - sizeBefore;
+  const removed = applyHollowIfEnabled();
+  setStatus(
+    removed > 0
+      ? `Generated ${placedNet} blocks (hollowed: removed ${removed} interior).`
+      : `Generated ${placedNet} blocks.`
+  );
 }
 
 document.getElementById("generateBtn").addEventListener("click", generateCurve);
